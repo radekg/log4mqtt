@@ -111,10 +111,10 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             ip = "<unknown>";
         }
 
-        if ( clientid.equals("{ip}") ) {
-            clientid = ip;
-        } else if ( clientid.equals("{hostname}") ) {
-            clientid = hostName;
+        if ( clientid.indexOf("{ip}") > -1 ) {
+            clientid = clientid.replace("{ip}".subSequence(0,"{ip}".length()), ip.subSequence(0,ip.length()));
+        } else if ( clientid.indexOf("{hostname}") > -1 ) {
+            clientid = clientid.replace("{hostname}".subSequence(0,"{hostname}".length()), hostName.subSequence(0,hostName.length()));
         }
 
         MqttConnectOptions opts = new MqttConnectOptions();
