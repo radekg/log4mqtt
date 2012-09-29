@@ -147,7 +147,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                     errorHandler.error("MQTT connection error: Connection Refused: unacceptable protocol version");
                     break;
                 case 2:
-                    errorHandler.error("MQTT connection error: Connection Refused: identifier rejected");
+                    errorHandler.error("MQTT connection error: Connection Refused: identifier ("+clientid+") rejected");
                     break;
                 case 3:
                     errorHandler.error("MQTT connection error: Connection Refused: server unavailable");
@@ -211,11 +211,16 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
 
         if ( clientid.indexOf("{ip}") > -1 ) {
             clientid = clientid.replace("{ip}".subSequence(0,"{ip}".length()), ip.subSequence(0,ip.length()));
+
         } else if ( clientid.indexOf("{hostname}") > -1 ) {
             clientid = clientid.replace("{hostname}".subSequence(0, "{hostname}".length()), hostname.subSequence(0, hostname.length()));
         }
 
         connectMqtt();
+    }
+
+    public void finalize() {
+        this.close();
     }
 
     public synchronized void append( LoggingEvent event ) {
@@ -264,6 +269,8 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             mqtt = null;
         }
     }
+
+
 
     @Override
     public void connectionLost(Throwable cause) {
