@@ -13,6 +13,9 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
     private MqttClient mqtt;
     private String hostName;
     private String ip;
+    private final int RECONNECT_MIN = 1000;
+    private final int RECONNECT_MAX = 32000;
+    private int currentReconnect = 1000;
 
     private String broker;
     private String clientid;
@@ -96,6 +99,63 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         this.retain = retain;
     }
 
+    private void connectMqtt() {
+        MqttConnectOptions opts = new MqttConnectOptions();
+        opts.setConnectionTimeout(connectionTimeout);
+        opts.setKeepAliveInterval(keepAliveInterval);
+        if ( username != null ) {
+            opts.setUserName(username);
+        }
+        if ( password != null ) {
+            opts.setPassword(password.toCharArray());
+        }
+        try {
+            mqtt = new MqttClient(broker, clientid, null);
+            mqtt.connect(opts);
+            currentReconnect = RECONNECT_MIN;
+        } catch (MqttSecurityException ex1) {
+            errorHandler.error("MQTT Security error: " + ex1);
+        } catch (MqttException ex2) {
+            int code = ex2.getReasonCode();
+            switch (code) {
+                case 0: // connection successful
+                    currentReconnect = RECONNECT_MIN;
+                    break;
+                case 1:
+                    errorHandler.error("MQTT connection error: Connection Refused: unacceptable protocol version");
+                    break;
+                case 2:
+                    errorHandler.error("MQTT connection error: Connection Refused: identifier rejected");
+                    break;
+                case 3:
+                    errorHandler.error("MQTT connection error: Connection Refused: server unavailable");
+                    break;
+                case 4:
+                    errorHandler.error("MQTT connection error: Connection Refused: bad user name or password");
+                    break;
+                case 5:
+                    errorHandler.error("MQTT connection error: Connection Refused: not authorized");
+                    break;
+                default:
+                    errorHandler.error("MQTT connection error: Unknown response -> " + code);
+            }
+        }
+    }
+
+    private void reconnectMqtt() {
+        if ( currentReconnect < RECONNECT_MAX ) {
+            currentReconnect += currentReconnect;
+        }
+        Thread t = new Thread() {
+            public void run() {
+                try {
+                    Thread.sleep(currentReconnect);
+                    connectMqtt();
+                } catch (InterruptedException ex) {}
+            }
+        };
+    }
+
     public boolean requiresLayout() { return false; }
 
     public void activateOptions() {
@@ -117,25 +177,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             clientid = clientid.replace("{hostname}".subSequence(0,"{hostname}".length()), hostName.subSequence(0,hostName.length()));
         }
 
-        MqttConnectOptions opts = new MqttConnectOptions();
-        opts.setConnectionTimeout(connectionTimeout);
-        opts.setKeepAliveInterval(keepAliveInterval);
-        if ( username != null ) {
-            opts.setUserName(username);
-        }
-        if ( password != null ) {
-            opts.setPassword(password.toCharArray());
-        }
-        try {
-            mqtt = new MqttClient(broker, clientid, null);
-            mqtt.connect(opts);
-        } catch (MqttSecurityException ex1) {
-            errorHandler.error("MQTT Security error: " + ex1);
-        } catch (MqttException ex2) {
-            if ( ex2.getReasonCode() != 0 ) {
-                errorHandler.error("MQTT error: " + ex2);
-            }
-        }
+        connectMqtt();
     }
 
     public synchronized void append( LoggingEvent event ) {
@@ -229,6 +271,8 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
     @Override
     public void connectionLost(Throwable cause) {
         this.close();
+        errorHandler.error("Connection to the MQTT broker lost, reconnecting: " + cause);
+        reconnectMqtt();
     }
 
     @Override
