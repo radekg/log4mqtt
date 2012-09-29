@@ -104,6 +104,14 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         this.retain = retain;
     }
 
+    public String getOutputFormat() {
+        return outputFormat;
+    }
+
+    public void setOutputFormat(String outputFormat) {
+        this.outputFormat = outputFormat;
+    }
+
     private void connectMqtt() {
         MqttConnectOptions opts = new MqttConnectOptions();
         opts.setConnectionTimeout(connectionTimeout);
