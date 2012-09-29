@@ -1,12 +1,12 @@
 package uk.co.appembassy.log4mqtt;
 
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.spi.ErrorCode;
 import org.apache.log4j.spi.LoggingEvent;
 import org.eclipse.paho.client.mqttv3.*;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Iterator;
 
 public class MqttAppender extends AppenderSkeleton implements MqttCallback {
 
@@ -26,6 +26,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
     private String topic;
     private int qos = 0;
     private boolean retain = false;
+    private String outputFormat = "json";
 
     public String getBroker() {
         return broker;
@@ -156,9 +157,15 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         };
     }
 
-    public boolean requiresLayout() { return false; }
+    public boolean requiresLayout() { return true; }
 
     public void activateOptions() {
+
+        if ( outputFormat.equals("json") ) {
+            this.setLayout(new JsonLoggingEventLayout());
+        } else if ( outputFormat.equals("xml") ) {
+
+        }
 
         try {
             hostName = InetAddress.getLocalHost().getHostName();
@@ -182,67 +189,14 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
 
     public synchronized void append( LoggingEvent event ) {
 
-        StringBuilder json = new StringBuilder();
-        json.append("{");
-        json.append("\"hostname\":");
-        json.append(",\"ip\":");
-        json.append(",\"timestamp\":");
-        json.append(event.getTimeStamp());
-        json.append(",\"error_level_string\":");
-        json.append("\"" + event.getLevel().toString() + "\"");
-        json.append(",\"error_level_code\":");
-        json.append(event.getLevel().toInt());
-        json.append(",\"message\":");
-        json.append("\"" + event.getMessage().toString().replaceAll("\"", "\\\"") + "\"");
-        json.append(",\"fqn\":");
-        json.append("\"" + event.getFQNOfLoggerClass().replaceAll("\"", "\\\"") + "\"");
-        json.append(",\"logger_name\":");
-        json.append("\"" + event.getLoggerName().replaceAll("\"", "\\\"") + "\"");
-        if ( event.getNDC() != null ) {
-            json.append(",\"ndc\":");
-            json.append("\"" + event.getNDC().replaceAll("\"", "\\\"") + "\"");
+        if( this.layout == null ){
+            errorHandler.error("No layout for appender " + name, null, ErrorCode.MISSING_LAYOUT );
+            return;
         }
-        if ( event.getRenderedMessage() != null ) {
-            json.append(",\"rendered_message\":");
-            json.append("\"" + event.getRenderedMessage().replaceAll("\"", "\\\"") + "\"");
-        }
-        if (event.locationInformationExists()) {
-            json.append(",\"location_info\":");
-            json.append("\"" + event.getLocationInformation().fullInfo.replaceAll("\"", "\\\"") + "\"");
-        }
-        if ( event.getThreadName() != null ) {
-            json.append(",\"thread_name\":");
-            json.append("\"" + event.getThreadName().replaceAll("\"", "\\\"") + "\"");
-        }
-        if ( event.getThrowableStrRep() != null ) {
-            String[] throwable = event.getThrowableStrRep();
-            if ( throwable.length > 0 ) {
-                json.append(",\"throwable\":[");
-                for ( int i=0; i<throwable.length; i++ ) {
-                    if ( i > 0 ) json.append(",");
-                    json.append("\"" + throwable[i].replaceAll("\"", "\\\"") + "\"");
-                }
-                json.append("\"]\"");
-            }
-        }
-
-        if ( event.getProperties() != null && event.getProperties().size() > 0 ) {
-            json.append(",\"properties\":{");
-            Iterator<String> iter = event.getProperties().keySet().iterator();
-            int c = 0;
-            while (iter.hasNext()) {
-                if ( c > 0 ) json.append(",");
-                String key = iter.next();
-                json.append("\"" + key.replaceAll("\"", "\\\"") + "\":");
-                json.append("\"" + event.getProperty(key).replaceAll("\"", "\\\"") + "\"");
-            }
-            json.append("}");
-        }
-
-        json.append("}");
 
         MqttMessage msg = new MqttMessage();
-        msg.setPayload( json.toString().getBytes() );
+        msg.setPayload( this.layout.format(event).getBytes() );
+
         msg.setQos( qos );
         msg.setRetained( retain );
         try {
