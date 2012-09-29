@@ -11,7 +11,7 @@ Usage:
     log4j.appender.stdout.layout.ConversionPattern=%5p %d{HH:mm:ss,SSS} %m%n
 
     # MQTT
-    log4j.appender.MQTT=com.gruchalski.uk.co.appembassy.log4mqtt.MqttAppender
+    log4j.appender.MQTT=uk.co.appembassy.log4mqtt.MqttAppender
     log4j.appender.MQTT.topic=logging/topic
     #log4j.appender.MQTT.username=username
     #log4j.appender.MQTT.password=password
