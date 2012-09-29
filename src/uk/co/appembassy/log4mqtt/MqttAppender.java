@@ -5,7 +5,11 @@ import org.apache.log4j.spi.ErrorCode;
 import org.apache.log4j.spi.LoggingEvent;
 import org.eclipse.paho.client.mqttv3.*;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.locks.Lock;
@@ -31,6 +35,9 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
     private int qos = 0;
     private boolean retain = false;
     private String outputFormat = "json";
+
+    private String discoveryService;
+    private int discoveryPort = 1883;
 
     public String getBroker() {
         return broker;
@@ -112,7 +119,37 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         this.outputFormat = outputFormat;
     }
 
+    public int getDiscoveryPort() {
+        return discoveryPort;
+    }
+
+    public void setDiscoveryPort(int discoveryPort) {
+        this.discoveryPort = discoveryPort;
+    }
+
+    public String getDiscoveryService() {
+        return discoveryService;
+    }
+
+    public void setDiscoveryService(String discoveryService) {
+        this.discoveryService = discoveryService;
+    }
+
     private void connectMqtt() {
+
+        if ( discoveryService != null ) {
+            try {
+                Socket s = new Socket(discoveryService, discoveryPort);
+                BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                hostname = in.readLine();
+                in.close();
+                s.close();
+            } catch (IOException ex) {
+                errorHandler.error("Could not contact the discovery service: " + ex);
+                return;
+            }
+        }
+
         MqttConnectOptions opts = new MqttConnectOptions();
         opts.setConnectionTimeout(connectionTimeout);
         opts.setKeepAliveInterval(keepAliveInterval);
