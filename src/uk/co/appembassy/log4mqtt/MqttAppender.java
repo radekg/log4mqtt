@@ -7,15 +7,19 @@ import org.eclipse.paho.client.mqttv3.*;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.Lock;
 
 public class MqttAppender extends AppenderSkeleton implements MqttCallback {
 
     private MqttClient mqtt;
-    private String hostName;
+    private String hostname;
     private String ip;
     private final int RECONNECT_MIN = 1000;
     private final int RECONNECT_MAX = 32000;
     private int currentReconnect = 1000;
+    private boolean connected = false;
+    private LinkedBlockingQueue<LoggingEvent> queue = new LinkedBlockingQueue<LoggingEvent>(10000);
 
     private String broker;
     private String clientid;
@@ -114,13 +118,22 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             mqtt = new MqttClient(broker, clientid, null);
             mqtt.connect(opts);
             currentReconnect = RECONNECT_MIN;
+            synchronized (this) {
+                connected = true;
+            }
+            emptyQueue();
         } catch (MqttSecurityException ex1) {
             errorHandler.error("MQTT Security error: " + ex1);
         } catch (MqttException ex2) {
             int code = ex2.getReasonCode();
             switch (code) {
-                case 0: // connection successful
+                case 0: // connection successful, am I ever going here?
+                    // while testing I've noticed I am as I was receiving code 0 here, weird...
                     currentReconnect = RECONNECT_MIN;
+                    synchronized (this) {
+                        connected = true;
+                    }
+                    emptyQueue();
                     break;
                 case 1:
                     errorHandler.error("MQTT connection error: Connection Refused: unacceptable protocol version");
@@ -140,6 +153,12 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                 default:
                     errorHandler.error("MQTT connection error: Unknown response -> " + code);
             }
+        }
+    }
+
+    private synchronized void emptyQueue() {
+        while (!queue.isEmpty()) {
+            append(queue.poll());
         }
     }
 
@@ -164,13 +183,17 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         if ( outputFormat.equals("json") ) {
             this.setLayout(new JsonLoggingEventLayout());
         } else if ( outputFormat.equals("xml") ) {
-
+            this.setLayout(new XmlLoggingEventLayout());
+        } else {
+            errorHandler.error("Unknown outputFormat " + outputFormat + " in " + name, null, ErrorCode.MISSING_LAYOUT );
+            return;
         }
+        this.layout.activateOptions(); // not sure if I have to call this manually?
 
         try {
-            hostName = InetAddress.getLocalHost().getHostName();
+            hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException ex) {
-            hostName = "<unknown>";
+            hostname = "<unknown>";
         }
         try {
             ip = InetAddress.getLocalHost().getHostAddress();
@@ -181,7 +204,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         if ( clientid.indexOf("{ip}") > -1 ) {
             clientid = clientid.replace("{ip}".subSequence(0,"{ip}".length()), ip.subSequence(0,ip.length()));
         } else if ( clientid.indexOf("{hostname}") > -1 ) {
-            clientid = clientid.replace("{hostname}".subSequence(0,"{hostname}".length()), hostName.subSequence(0,hostName.length()));
+            clientid = clientid.replace("{hostname}".subSequence(0, "{hostname}".length()), hostname.subSequence(0, hostname.length()));
         }
 
         connectMqtt();
@@ -194,25 +217,37 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             return;
         }
 
-        MqttMessage msg = new MqttMessage();
-        msg.setPayload( this.layout.format(event).getBytes() );
-
-        msg.setQos( qos );
-        msg.setRetained( retain );
-        try {
-            if ( mqtt != null ) {
-                mqtt.getTopic(this.topic).publish(msg);
+        if ( connected ) {
+            MqttMessage msg = new MqttMessage();
+            msg.setPayload( this.layout.format(event).getBytes() );
+            msg.setQos( qos );
+            msg.setRetained( retain );
+            try {
+                if ( mqtt != null ) {
+                    mqtt.getTopic(this.topic).publish(msg);
+                }
+            } catch (MqttPersistenceException ex1) {
+                errorHandler.error("MQTT Could not send a message: " + ex1);
+                if ( !queue.offer(event) ) {
+                    errorHandler.error("MQTT offer queue is full. Messages will be lost.");
+                }
+            } catch (MqttException ex2) {
+                errorHandler.error("MQTT Could not send a message: " + ex2);
+                if ( !queue.offer(event) ) {
+                    errorHandler.error("MQTT offer queue is full. Messages will be lost.");
+                }
             }
-        } catch (MqttPersistenceException ex1) {
-            errorHandler.error("MQTT Could not send a message: " + ex1);
-            errorHandler.error("MQTT: " + msg);
-        } catch (MqttException ex2) {
-            errorHandler.error("MQTT Could not send a message: " + ex2);
-            errorHandler.error("MQTT: " + msg);
+        } else {
+            if ( !queue.offer(event) ) {
+                errorHandler.error("MQTT offer queue is full. Messages will be lost.");
+            }
         }
     }
 
     public synchronized void close() {
+        synchronized (this) {
+            connected = false;
+        }
         try {
             mqtt.disconnect();
         } catch (MqttException ex) {
