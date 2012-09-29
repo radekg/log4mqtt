@@ -4,7 +4,7 @@ Usage:
 
     # output messages into a rolling log file as well as stdout
     log4j.rootLogger=stdout,MQTT
-    
+
     # stdout
     log4j.appender.stdout=org.apache.log4j.ConsoleAppender
     log4j.appender.stdout.layout=org.apache.log4j.PatternLayout

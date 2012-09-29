@@ -145,7 +145,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                 in.close();
                 s.close();
             } catch (IOException ex) {
-                errorHandler.error("Could not contact the discovery service: " + ex);
+                errorHandler.error("Could not contact the discovery service ("+name+"): " + ex);
                 return;
             }
         }
