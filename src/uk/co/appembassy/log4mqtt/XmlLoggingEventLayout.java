@@ -43,27 +43,27 @@ public class XmlLoggingEventLayout extends Layout {
 
         xml.append("<error_level_string><![CDATA[" + event.getLevel().toString() + "]]></error_level_string>");
         xml.append("<error_level_code>" + event.getLevel().toInt() + "</error_level_code>");
-        xml.append("<message><![CDATA[" + event.getMessage().toString().replaceAll("\"", "\\\"") + "]]></message>");
-        xml.append("<fqn><![CDATA[" + event.getFQNOfLoggerClass().replaceAll("\"", "\\\"") + "]]></fqn>");
-        xml.append("<logger_name><![CDATA[" + event.getLoggerName().replaceAll("\"", "\\\"") + "]]></logger_name>");
+        xml.append("<message><![CDATA[" + event.getMessage().toString().replaceAll("\"", "\\\\\"") + "]]></message>");
+        xml.append("<fqn><![CDATA[" + event.getFQNOfLoggerClass().replaceAll("\"", "\\\\\"") + "]]></fqn>");
+        xml.append("<logger_name><![CDATA[" + event.getLoggerName().replaceAll("\"", "\\\\\"") + "]]></logger_name>");
         if ( event.getNDC() != null ) {
-            xml.append("<ndc><![CDATA[" + event.getNDC().replaceAll("\"", "\\\"") + "]]></ndc>");
+            xml.append("<ndc><![CDATA[" + event.getNDC().replaceAll("\"", "\\\\\"") + "]]></ndc>");
         }
         if ( event.getRenderedMessage() != null ) {
-            xml.append("<rendered_message><![CDATA[" + event.getRenderedMessage().replaceAll("\"", "\\\"") + "]]></rendered_message>");
+            xml.append("<rendered_message><![CDATA[" + event.getRenderedMessage().replaceAll("\"", "\\\\\"") + "]]></rendered_message>");
         }
         if (event.locationInformationExists()) {
-            xml.append("<location_info><![CDATA[" + event.getLocationInformation().fullInfo.replaceAll("\"", "\\\"") + "]]></location_info>");
+            xml.append("<location_info><![CDATA[" + event.getLocationInformation().fullInfo.replaceAll("\"", "\\\\\"") + "]]></location_info>");
         }
         if ( event.getThreadName() != null ) {
-            xml.append("<thread_name><![CDATA[" + event.getThreadName().replaceAll("\"", "\\\"") + "]]></thread_name>");
+            xml.append("<thread_name><![CDATA[" + event.getThreadName().replaceAll("\"", "\\\\\"") + "]]></thread_name>");
         }
         if ( event.getThrowableStrRep() != null ) {
             String[] throwable = event.getThrowableStrRep();
             if ( throwable.length > 0 ) {
                 xml.append("<throwable>");
                 for ( int i=0; i<throwable.length; i++ ) {
-                    xml.append("<"+i+"><![CDATA[" + throwable[i].replaceAll("\"", "\\\"") + "]]></"+i+">");
+                    xml.append("<"+i+"><![CDATA[" + throwable[i].replaceAll("\"", "\\\\\"") + "]]></"+i+">");
                 }
                 xml.append("</throwable>");
             }
@@ -75,9 +75,9 @@ public class XmlLoggingEventLayout extends Layout {
             int c = 0;
             while (iter.hasNext()) {
                 String key = iter.next();
-                xml.append("<"+key.replaceAll("\"", "\\\"")+">");
-                xml.append("<![CDATA[" + event.getProperty(key).replaceAll("\"", "\\\"") + "]]>");
-                xml.append("</"+key.replaceAll("\"", "\\\"")+">");
+                xml.append("<"+key.replaceAll("\"", "\\\\\"")+">");
+                xml.append("<![CDATA[" + event.getProperty(key).replaceAll("\"", "\\\\\"") + "]]>");
+                xml.append("</"+key.replaceAll("\"", "\\\\\"")+">");
             }
             xml.append("</properties>");
         }
