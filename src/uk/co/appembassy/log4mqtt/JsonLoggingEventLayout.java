@@ -77,7 +77,7 @@ public class JsonLoggingEventLayout extends Layout {
                     if ( i > 0 ) json.append(",");
                     json.append("\"" + throwable[i].replaceAll("\"", "\\\\\"") + "\"");
                 }
-                json.append("\"]\"");
+                json.append("\"]");
             }
         }
 
