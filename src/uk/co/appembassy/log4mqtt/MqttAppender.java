@@ -26,6 +26,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
     private LinkedBlockingQueue<LoggingEvent> queue = new LinkedBlockingQueue<LoggingEvent>(10000);
 
     private String broker;
+    private String brokerProtocol;
     private String clientid;
     private String username;
     private String password;
@@ -45,6 +46,14 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
 
     public void setBroker(String broker) {
         this.broker = broker;
+    }
+
+    public String getBrokerProtocol() {
+        return brokerProtocol;
+    }
+
+    public void setBrokerProtocol(String brokerProtocol) {
+        this.brokerProtocol = brokerProtocol;
     }
 
     public String getClientid() {
@@ -141,7 +150,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             try {
                 Socket s = new Socket(discoveryService, discoveryPort);
                 BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
-                hostname = in.readLine();
+                broker = in.readLine();
                 in.close();
                 s.close();
             } catch (IOException ex) {
@@ -160,7 +169,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
             opts.setPassword(password.toCharArray());
         }
         try {
-            mqtt = new MqttClient(broker, clientid, null);
+            mqtt = new MqttClient(brokerProtocol + broker, clientid, null);
             mqtt.connect(opts);
             currentReconnect = RECONNECT_MIN;
             synchronized (this) {
