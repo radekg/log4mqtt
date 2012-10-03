@@ -48,26 +48,26 @@ public class JsonLoggingEventLayout extends Layout {
         json.append(",\"error_level_code\":");
         json.append(event.getLevel().toInt());
         json.append(",\"message\":");
-        json.append("\"" + event.getMessage().toString().replaceAll("\"", "\\\"") + "\"");
+        json.append("\"" + event.getMessage().toString().replaceAll("\"", "\\\\\"") + "\"");
         json.append(",\"fqn\":");
-        json.append("\"" + event.getFQNOfLoggerClass().replaceAll("\"", "\\\"") + "\"");
+        json.append("\"" + event.getFQNOfLoggerClass().replaceAll("\"", "\\\\\"") + "\"");
         json.append(",\"logger_name\":");
-        json.append("\"" + event.getLoggerName().replaceAll("\"", "\\\"") + "\"");
+        json.append("\"" + event.getLoggerName().replaceAll("\"", "\\\\\"") + "\"");
         if ( event.getNDC() != null ) {
             json.append(",\"ndc\":");
-            json.append("\"" + event.getNDC().replaceAll("\"", "\\\"") + "\"");
+            json.append("\"" + event.getNDC().replaceAll("\"", "\\\\\"") + "\"");
         }
         if ( event.getRenderedMessage() != null ) {
             json.append(",\"rendered_message\":");
-            json.append("\"" + event.getRenderedMessage().replaceAll("\"", "\\\"") + "\"");
+            json.append("\"" + event.getRenderedMessage().replaceAll("\"", "\\\\\"") + "\"");
         }
         if (event.locationInformationExists()) {
             json.append(",\"location_info\":");
-            json.append("\"" + event.getLocationInformation().fullInfo.replaceAll("\"", "\\\"") + "\"");
+            json.append("\"" + event.getLocationInformation().fullInfo.replaceAll("\"", "\\\\\"") + "\"");
         }
         if ( event.getThreadName() != null ) {
             json.append(",\"thread_name\":");
-            json.append("\"" + event.getThreadName().replaceAll("\"", "\\\"") + "\"");
+            json.append("\"" + event.getThreadName().replaceAll("\"", "\\\\\"") + "\"");
         }
         if ( event.getThrowableStrRep() != null ) {
             String[] throwable = event.getThrowableStrRep();
@@ -75,7 +75,7 @@ public class JsonLoggingEventLayout extends Layout {
                 json.append(",\"throwable\":[");
                 for ( int i=0; i<throwable.length; i++ ) {
                     if ( i > 0 ) json.append(",");
-                    json.append("\"" + throwable[i].replaceAll("\"", "\\\"") + "\"");
+                    json.append("\"" + throwable[i].replaceAll("\"", "\\\\\"") + "\"");
                 }
                 json.append("\"]\"");
             }
@@ -88,8 +88,8 @@ public class JsonLoggingEventLayout extends Layout {
             while (iter.hasNext()) {
                 if ( c > 0 ) json.append(",");
                 String key = iter.next();
-                json.append("\"" + key.replaceAll("\"", "\\\"") + "\":");
-                json.append("\"" + event.getProperty(key).replaceAll("\"", "\\\"") + "\"");
+                json.append("\"" + key.replaceAll("\"", "\\\\\"") + "\":");
+                json.append("\"" + event.getProperty(key).replaceAll("\"", "\\\\\"") + "\"");
             }
             json.append("}");
         }
