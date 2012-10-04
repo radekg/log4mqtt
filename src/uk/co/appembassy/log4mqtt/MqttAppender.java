@@ -171,6 +171,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
         try {
             mqtt = new MqttClient(brokerProtocol + broker, clientid, null);
             mqtt.connect(opts);
+            mqtt.setCallback(this);
             currentReconnect = RECONNECT_MIN;
             synchronized (this) {
                 connected = true;
