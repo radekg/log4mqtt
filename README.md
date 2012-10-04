@@ -31,6 +31,8 @@ Usage:
 
 Client ID may contain two special values: `{id}` and `{hostname}`. If the ID is `cassandra-{ip}` and appender is working on `127.0.0.1`, the ID will become `cassandra-127.0.0.1`. Alternatively `{hostname}` can be used.
 
+Try to use low keepAlive values so the lost connection is detected quickly.
+
 # Feedback
 
 Any ideas? Improvements?
