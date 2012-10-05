@@ -154,9 +154,16 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                 in.close();
                 s.close();
             } catch (IOException ex) {
-                errorHandler.error("Could not contact the discovery service ("+name+"): " + ex);
+                errorHandler.error("Could not contact the discovery service. Reconnecting...");
+                reconnectMqtt();
                 return;
             }
+        }
+
+        if ( broker.equals("ERROR:NO_BROKERS") ) {
+            errorHandler.error("No brokers available, reconnecting...");
+            reconnectMqtt();
+            return;
         }
 
         MqttConnectOptions opts = new MqttConnectOptions();
@@ -206,7 +213,8 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                     errorHandler.error("MQTT connection error: Connection Refused: not authorized");
                     break;
                 default:
-                    errorHandler.error("MQTT connection error: Unknown response -> " + code);
+                    errorHandler.error("MQTT connection error: Unknown response -> " + code + ", reconnecting...");
+                    reconnectMqtt();
             }
         }
     }
@@ -229,6 +237,7 @@ public class MqttAppender extends AppenderSkeleton implements MqttCallback {
                 } catch (InterruptedException ex) {}
             }
         };
+        t.start();
     }
 
     public boolean requiresLayout() { return true; }
